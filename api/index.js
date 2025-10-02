@@ -4,8 +4,10 @@ from flask import Flask, request, send_from_directory, jsonify
 from dotenv import load_dotenv
 import logging
 
+# Lade Umgebungsvariablen aus der .env-Datei, falls lokal getestet wird
 load_dotenv()
 
+# Konfiguriere das Logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -14,6 +16,7 @@ logging.basicConfig(
     ]
 )
 
+# Hole den API-Schlüssel aus der Umgebungsvariable
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not API_KEY:
@@ -21,7 +24,11 @@ if not API_KEY:
     raise ValueError("Kein GEMINI_API_KEY in der Umgebung gefunden.")
 
 genai.configure(api_key=API_KEY)
+
+# Initialisiere das Gemini-Modell
 model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Erstelle die Flask-App
 app = Flask(__name__)
 
 # Route, um die HTML-Datei auszuliefern
@@ -33,6 +40,7 @@ def serve_index():
 # API-Endpunkt für die Formularverarbeitung
 @app.route('/api/generate-text', methods=['POST'])
 def generate_text():
+    # .get() verwenden, um Abstürze bei fehlenden Feldern zu verhindern
     tatort = request.form.get('tatort')
     tathandlung = request.form.get('tathandlung')
     zeugen = request.form.get('zeugen')
@@ -52,16 +60,17 @@ def generate_text():
         response = model.generate_content(prompt_text)
         generated_text = response.text
         logging.info("API-Anfrage erfolgreich.")
-        # Rückgabe des generierten Textes als JSON
+        # Gib eine JSON-Antwort zurück, wie der Frontend-Code erwartet
         return jsonify({"text": generated_text})
     except Exception as e:
         logging.error(f"Fehler bei der API-Anfrage: {e}")
+        # Gib bei einem Fehler eine JSON-Antwort mit einer Fehlermeldung zurück
         return jsonify({"error": f"Fehler bei der API-Anfrage: {e}"}), 500
 
+# Dies ist notwendig, damit Vercel Flask korrekt erkennt.
 from vercel_python import VercelRequest, VercelResponse
 from flask_cors import CORS
 CORS(app)
 
 def handler(request: VercelRequest):
     return app(request.environ, request.start_response)
-

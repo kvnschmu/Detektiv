@@ -59,12 +59,10 @@
             form.style.display = 'none';
 
             const formData = new FormData(form);
+            const queryParams = new URLSearchParams(formData).toString();
             
             try {
-                const response = await fetch('/api/generate-text', {
-                    method: 'POST',
-                    body: formData
-                });
+                const response = await fetch('/.netlify/functions/generate-text?' + queryParams);
                 
                 const data = await response.json();
                 
