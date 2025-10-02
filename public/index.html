@@ -12,6 +12,10 @@
         textarea { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; resize: vertical; min-height: 100px; }
         button { display: block; width: 100%; padding: 15px; border: none; background-color: #007bff; color: white; font-size: 16px; border-radius: 4px; cursor: pointer; }
         button:hover { background-color: #0056b3; }
+        #resultContainer { display: none; margin-top: 30px; }
+        #resultPre { background: #f4f4f4; padding: 20px; border-radius: 8px; white-space: pre-wrap; }
+        .disclaimer { margin-top: 30px; font-size: 0.9em; color: #888; }
+        #loading { text-align: center; font-style: italic; color: #555; display: none; }
     </style>
 </head>
 <body>
@@ -32,6 +36,55 @@
 
         <button type="submit">Sachverhaltstext erstellen</button>
     </form>
+
+    <div id="loading">... wird erstellt ...</div>
+    
+    <div id="resultContainer">
+        <h2>Generierter Sachverhaltstext</h2>
+        <pre id="resultPre"></pre>
+        <p class="disclaimer">Hinweis: Dieser Text wurde von einer KI erstellt und ist kein juristischer Rat.</p>
+        <button onclick="window.location.reload();">Neuen Sachverhalt erstellen</button>
+    </div>
+    
+    <script>
+        const form = document.getElementById('factForm');
+        const loading = document.getElementById('loading');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultPre = document.getElementById('resultPre');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            loading.style.display = 'block';
+            form.style.display = 'none';
+
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch('/api/generate-text', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                loading.style.display = 'none';
+
+                if (data.error) {
+                    resultPre.textContent = 'Fehler: ' + data.error;
+                } else {
+                    resultPre.textContent = data.text;
+                }
+                
+                resultContainer.style.display = 'block';
+
+            } catch (error) {
+                loading.style.display = 'none';
+                resultContainer.style.display = 'block';
+                resultPre.textContent = 'Ein unerwarteter Fehler ist aufgetreten: ' + error.message;
+            }
+        });
+    </script>
 
 </body>
 </html>
