@@ -1,49 +1,35 @@
 import os
 import google.generativeai as genai
-import json
+from flask import Flask, request, send_from_directory, jsonify
 from dotenv import load_dotenv
-import logging
 
 load_dotenv()
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()
-    ]
-)
-
 API_KEY = os.getenv("GEMINI_API_KEY")
 
+# Diese Prüfung sollte eine JSON-Antwort zurückgeben
 if not API_KEY:
-    # Netlify-Funktionen verwenden einen anderen Rückgabetyp
-    return {
-        "statusCode": 500,
-        "body": json.dumps({"error": "Kein GEMINI_API_KEY gefunden."})
-    }
+    # return "API-Schlüssel fehlt. Bitte in Vercel konfigurieren.", 500 # Falsch
+    # Korrekt:
+    app = Flask(__name__)
+    @app.route('/api/generate-text', methods=['POST'])
+    def missing_key():
+        return jsonify({"error": "API-Schlüssel fehlt. Bitte in Vercel konfigurieren."}), 500
 
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+else:
+    genai.configure(api_key=API_KEY)
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    app = Flask(__name__)
 
-def handler(event, context):
-    try:
-        # Daten aus dem Body der POST-Anfrage holen
-        if event.get('body'):
-            # Form-Daten werden oft als 'application/x-www-form-urlencoded' oder 'multipart/form-data' gesendet.
-            # Ein einfaches Parsing kann hier notwendig sein.
-            # Für diesen Fall gehen wir davon aus, dass die Daten als String gesendet werden.
-            import urllib.parse
-            data = urllib.parse.parse_qs(event['body'])
-            tatort = data.get('tatort', [''])[0]
-            tathandlung = data.get('tathandlung', [''])[0]
-            zeugen = data.get('zeugen', [''])[0]
-            beweismittel = data.get('beweismittel', [''])[0]
-        else:
-            return {
-                "statusCode": 400,
-                "body": json.dumps({"error": "Keine Daten in der Anfrage gefunden."})
-            }
+    @app.route('/')
+    def serve_index():
+        return send_from_directory('public', "index.html")
+
+    @app.route('/api/generate-text', methods=['POST'])
+    def generate_text():
+        tatort = request.form.get('tatort')
+        tathandlung = request.form.get('tathandlung')
+        zeugen = request.form.get('zeugen')
+        beweismittel = request.form.get('beweismittel')
 
         prompt_text = f"""
         Prompt zur Erstellung eines juristischen Sachverhaltstextes
@@ -53,20 +39,9 @@ def handler(event, context):
         3. Zeugen und Festnahme: {zeugen}
         4. Beweismittel: {beweismittel}
         """
-        logging.info("Neue Anfrage erhalten.")
-
-        response = model.generate_content(prompt_text)
-        generated_text = response.text
-        logging.info("API-Anfrage erfolgreich.")
-        
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"text": generated_text})
-        }
-    
-    except Exception as e:
-        logging.error(f"Fehler bei der API-Anfrage: {e}")
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": f"Fehler bei der API-Anfrage: {e}"})
-        }
+        try:
+            response = model.generate_content(prompt_text)
+            generated_text = response.text
+            return jsonify({"text": generated_text})
+        except Exception as e:
+            return jsonify({"error": f"Fehler bei der API-Anfrage: {e}"}), 500
