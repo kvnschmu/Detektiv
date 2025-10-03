@@ -3,30 +3,20 @@ import google.generativeai as genai
 from flask import Flask, request, send_from_directory, jsonify
 from dotenv import load_dotenv
 
-# Lade Umgebungsvariablen aus der .env-Datei, falls lokal getestet wird
 load_dotenv()
-
-# Hole den API-Schlüssel aus der Umgebungsvariable
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not API_KEY:
-    # Gib einen klaren Fehler zurück, falls der Schlüssel fehlt
-    raise ValueError("Kein GEMINI_API_KEY in der Umgebung gefunden.")
+    return "API-Schlüssel fehlt. Bitte in Vercel konfigurieren.", 500
 
 genai.configure(api_key=API_KEY)
-
-# Initialisiere das Gemini-Modell
 model = genai.GenerativeModel('gemini-1.5-flash')
-
-# Erstelle die Flask-App
 app = Flask(__name__)
 
-# Route, um die HTML-Datei auszuliefern
 @app.route('/')
 def serve_index():
-    return send_from_directory('public', 'index.html')
+    return send_from_directory('public", "index.html")
 
-# API-Endpunkt für die Formularverarbeitung
 @app.route('/api/generate-text', methods=['POST'])
 def generate_text():
     tatort = request.form.get('tatort')
