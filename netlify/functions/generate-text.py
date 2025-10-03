@@ -17,7 +17,6 @@ logging.basicConfig(
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not API_KEY:
-    logging.error("Kein GEMINI_API_KEY in der Umgebung gefunden.")
     return {
         "statusCode": 500,
         "body": "Kein GEMINI_API_KEY gefunden."
@@ -28,11 +27,12 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 
 def handler(event, context):
     try:
+        # Die Daten kommen bei Netlify-Functions in event.queryStringParameters
         data = event.get('queryStringParameters', {})
-        tatort = data.get('tatort', 'Nicht angegeben')
-        tathandlung = data.get('tathandlung', 'Nicht angegeben')
-        zeugen = data.get('zeugen', 'Nicht angegeben')
-        beweismittel = data.get('beweismittel', 'Nicht angegeben')
+        tatort = data.get('tatort', '')
+        tathandlung = data.get('tathandlung', '')
+        zeugen = data.get('zeugen', '')
+        beweismittel = data.get('beweismittel', '')
 
         prompt_text = f"""
         Prompt zur Erstellung eines juristischen Sachverhaltstextes
@@ -42,7 +42,7 @@ def handler(event, context):
         3. Zeugen und Festnahme: {zeugen}
         4. Beweismittel: {beweismittel}
         """
-        logging.info(f"Neue Anfrage erhalten.")
+        logging.info("Neue Anfrage erhalten.")
 
         response = model.generate_content(prompt_text)
         generated_text = response.text
