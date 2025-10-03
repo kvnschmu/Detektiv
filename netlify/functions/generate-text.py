@@ -17,9 +17,10 @@ logging.basicConfig(
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not API_KEY:
+    # Netlify-Funktionen verwenden einen anderen Rückgabetyp
     return {
         "statusCode": 500,
-        "body": "Kein GEMINI_API_KEY gefunden."
+        "body": json.dumps({"error": "Kein GEMINI_API_KEY gefunden."})
     }
 
 genai.configure(api_key=API_KEY)
@@ -27,12 +28,22 @@ model = genai.GenerativeModel('gemini-1.5-flash')
 
 def handler(event, context):
     try:
-        # Die Daten kommen bei Netlify-Functions in event.queryStringParameters
-        data = event.get('queryStringParameters', {})
-        tatort = data.get('tatort', '')
-        tathandlung = data.get('tathandlung', '')
-        zeugen = data.get('zeugen', '')
-        beweismittel = data.get('beweismittel', '')
+        # Daten aus dem Body der POST-Anfrage holen
+        if event.get('body'):
+            # Form-Daten werden oft als 'application/x-www-form-urlencoded' oder 'multipart/form-data' gesendet.
+            # Ein einfaches Parsing kann hier notwendig sein.
+            # Für diesen Fall gehen wir davon aus, dass die Daten als String gesendet werden.
+            import urllib.parse
+            data = urllib.parse.parse_qs(event['body'])
+            tatort = data.get('tatort', [''])[0]
+            tathandlung = data.get('tathandlung', [''])[0]
+            zeugen = data.get('zeugen', [''])[0]
+            beweismittel = data.get('beweismittel', [''])[0]
+        else:
+            return {
+                "statusCode": 400,
+                "body": json.dumps({"error": "Keine Daten in der Anfrage gefunden."})
+            }
 
         prompt_text = f"""
         Prompt zur Erstellung eines juristischen Sachverhaltstextes
